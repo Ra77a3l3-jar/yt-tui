@@ -1,0 +1,15 @@
+[package]
+name = "ytd-tui"
+version = "0.1.0"
+edition = "2024"
+description = "A terminal user interface for YouTube downloading using yt-dlp."
+authors = ["Ra77a3l3-jar"]
+license = "MIT"
+
+[dependencies]
+ratatui = "0.26"
+crossterm = "0.27"
+tokio = { version = "1", features = ["full"] }
+anyhow = "1"
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
