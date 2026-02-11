@@ -1,19 +1,18 @@
-use std::io;
+mod app;
+mod ui;
 
+use std::io;
 use anyhow::Result;
 use crossterm::{
     event::{self, Event, KeyCode},
     execute,
-    terminal::{EnterAlternateScreen, LeaveAlternateScreen, disable_raw_mode, enable_raw_mode},
+    terminal::{disable_raw_mode, enable_raw_mode, EnterAlternateScreen, LeaveAlternateScreen},
 };
-use ratatui::{
-    Terminal,
-    backend::CrosstermBackend,
-    widgets::{Block, Borders, Paragraph},
-};
+use ratatui::{backend::CrosstermBackend, Terminal};
+
+use app::App;
 
 fn main() -> Result<()> {
-    // Enable raw mode
     enable_raw_mode()?;
     let mut stdout = io::stdout();
     execute!(stdout, EnterAlternateScreen)?;
@@ -21,21 +20,19 @@ fn main() -> Result<()> {
     let backend = CrosstermBackend::new(stdout);
     let mut terminal = Terminal::new(backend)?;
 
+    let mut app = App::new();
+
     loop {
-        terminal.draw(|frame| {
-            let size = frame.size();
+        terminal.draw(|frame| ui::render(frame, &app))?;
 
-            let block = Block::default().title("yt-tui").borders(Borders::ALL);
+        if app.should_quit {
+            break;
+        }
 
-            let paragraph = Paragraph::new("Press 'q' to quit").block(block);
-
-            frame.render_widget(paragraph, size);
-        })?;
-
-        // Check for q char to exit
+        // Check for q char to change state
         if let Event::Key(key) = event::read()? {
             if key.code == KeyCode::Char('q') {
-                break;
+                app.should_quit = true;
             }
         }
     }
