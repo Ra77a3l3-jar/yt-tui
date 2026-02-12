@@ -10,6 +10,7 @@ pub struct App {
     pub video_info: Option<VideoInfo>,
     pub sender: mpsc::Sender<Message>,
     pub reciver: mpsc::Receiver<Message>,
+    pub spinner_index: usize,
 }
 
 pub enum InputMode {
@@ -35,6 +36,20 @@ impl App {
             video_info: None,
             sender: tx,
             reciver: rx,
+            spinner_index: 0,
         }
+    }
+
+    pub fn spinner_frame(&self) -> &'static str {
+        const FRAMES: [&str; 10] = [
+            "⠋","⠙","⠹","⠸","⠼",
+            "⠴","⠦","⠧","⠇","⠏",
+        ];
+
+        FRAMES[self.spinner_index % FRAMES.len()]
+    }
+
+    pub fn tick(&mut self) {
+        self.spinner_index += 1;
     }
 }

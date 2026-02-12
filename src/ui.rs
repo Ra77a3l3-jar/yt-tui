@@ -1,3 +1,5 @@
+use std::fmt::format;
+
 use ratatui::{
     Frame,
     widgets::{Block, Borders, Paragraph},
@@ -10,7 +12,7 @@ use crate::app::{App, InputMode};
 pub fn render(frame: &mut Frame, app: &App) {
     match app.screen {
         crate::app::Screen::UrlInput => draw_input(frame, app),
-        crate::app::Screen::Downloading => draw_downloading(frame),
+        crate::app::Screen::Downloading => draw_downloading(frame, app),
         crate::app::Screen::Normal => draw_normal(frame, app),
     }
 }
@@ -57,14 +59,16 @@ fn draw_input(frame: &mut Frame, app: &App) {
     }
 }
 
-fn draw_downloading(frame: &mut Frame) {
+fn draw_downloading(frame: &mut Frame, app: &App) {
     let size = frame.size();
 
-    let text = Paragraph::new("Downloading...")
-        .alignment(Alignment::Center)
-        .block(Block::default().borders(Borders::ALL));
+    let text = format!("{} Downloading...", app.spinner_frame());
 
-    frame.render_widget(text, size);
+    let paragraph = Paragraph::new(text)
+        .alignment(Alignment::Center)
+        .block(Block::default().title("Status").borders(Borders::ALL));
+
+    frame.render_widget(paragraph, size);
 }
 
 fn draw_normal(frame: &mut Frame, app: &App) {

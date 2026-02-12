@@ -11,6 +11,7 @@ use crossterm::{
     terminal::{disable_raw_mode, enable_raw_mode, EnterAlternateScreen, LeaveAlternateScreen},
 };
 use ratatui::{backend::CrosstermBackend, Terminal};
+use std::time::{Duration, Instant};
 
 use app::App;
 
@@ -24,6 +25,9 @@ async fn main() -> Result<()> {
     let mut terminal = Terminal::new(backend)?;
 
     let mut app = App::new();
+
+    let tick_rate = Duration::from_millis(80);
+    let mut last_tick = Instant::now();
 
     loop {
         while let Ok(msg) = app.reciver.try_recv() {
@@ -46,43 +50,56 @@ async fn main() -> Result<()> {
         }
 
         // Check for q char to change state
-        if let Event::Key(key) = event::read()? {
-            match key.code {
-                KeyCode::Char('q') => {
-                    app.should_quit = true;
-                }
-                KeyCode::Char(c) => {
-                    if matches!(app.input_mode, app::InputMode::Editing) {
-                        app.input.push(c);
-                    }
-                }
-                KeyCode::Backspace => {
-                    if matches!(app.input_mode, app::InputMode::Editing) {
-                        app.input.pop();
-                    }
-                }
-                KeyCode::Enter => {
-                    if matches!(app.screen, app::Screen::UrlInput) {
-                        app.input_mode = app::InputMode::Normal;
-                        app.screen = app::Screen::Downloading;
+        let timeout = tick_rate
+            .checked_sub(last_tick.elapsed())
+            .unwrap_or_else(|| Duration::from_secs(0));
 
-                        let url = app.input.clone();
-                        let sender = app.sender.clone();
+        if crossterm::event::poll(timeout)? {
+            if let Event::Key(key) = event::read()? {
+                match key.code {
+                    KeyCode::Char('q') => app.should_quit = true,
 
-                        tokio::spawn(async move {
-                            match crate::yt_dlp::info::fetch_info(&url).await {
-                                Ok(info) => {
-                                    let _ = sender.send(crate::message::Message::VideoInfoLoader(info)).await;
-                                }
-                                Err(e) => {
-                                    let _ = sender.send(crate::message::Message::Error(e.to_string())).await;
-                                }
-                            }
-                        });
+                    KeyCode::Char(c) => {
+                        if matches!(app.input_mode, app::InputMode::Editing) {
+                            app.input.push(c);
+                        }
                     }
+
+                    KeyCode::Backspace => {
+                        if matches!(app.input_mode, app::InputMode::Editing) {
+                            app.input.pop();
+                        }
+                    }
+
+                    KeyCode::Enter => {
+                        if matches!(app.screen, app::Screen::UrlInput) {
+                            app.input_mode = app::InputMode::Normal;
+                            app.screen = app::Screen::Downloading;
+
+                            let url = app.input.clone();
+                            let sender = app.sender.clone();
+
+                            tokio::spawn(async move {
+                                match crate::yt_dlp::info::fetch_info(&url).await {
+                                    Ok(info) => {
+                                        let _ = sender.send(crate::message::Message::VideoInfoLoader(info)).await;
+                                    }
+                                    Err(e) => {
+                                        let _ = sender.send(crate::message::Message::Error(e.to_string())).await;
+                                    }
+                                }
+                            });
+                        }
+                    }
+
+                    _ => {}
                 }
-                _=> {}
             }
+        }
+
+        if last_tick.elapsed() >= tick_rate {
+            app.tick();
+            last_tick = Instant::now();
         }
     }
 
