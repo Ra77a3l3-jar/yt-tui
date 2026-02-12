@@ -1,6 +1,7 @@
 mod app;
 mod ui;
 mod yt_dlp;
+mod message;
 
 use std::io;
 use anyhow::Result;
@@ -25,6 +26,19 @@ async fn main() -> Result<()> {
     let mut app = App::new();
 
     loop {
+        while let Ok(msg) = app.reciver.try_recv() {
+            match msg {
+                message::Message::VideoInfoLoader(info) => {
+                    app.video_info = Some(info);
+                    app.screen = app::Screen::Normal;
+                }
+                message::Message::Error(e) => {
+                    app.screen = app::Screen::Normal;
+                    eprintln!("Error {e}");
+                }
+            }
+        }
+
         terminal.draw(|frame| ui::render(frame, &app))?;
 
         if app.should_quit {
@@ -53,17 +67,18 @@ async fn main() -> Result<()> {
                         app.screen = app::Screen::Downloading;
 
                         let url = app.input.clone();
+                        let sender = app.sender.clone();
 
-                        match yt_dlp::info::fetch_info(&url).await {
-                            Ok(info) => {
-                                app.video_info = Some(info);
-                                app.screen = app::Screen::Normal;
+                        tokio::spawn(async move {
+                            match crate::yt_dlp::info::fetch_info(&url).await {
+                                Ok(info) => {
+                                    let _ = sender.send(crate::message::Message::VideoInfoLoader(info)).await;
+                                }
+                                Err(e) => {
+                                    let _ = sender.send(crate::message::Message::Error(e.to_string())).await;
+                                }
                             }
-                            Err(e) => {
-                                println!("ERROR {e}");
-                                app.screen = app::Screen::Normal;
-                            }
-                        }
+                        });
                     }
                 }
                 _=> {}

@@ -9,7 +9,7 @@ pub struct VideoInfo {
     pub upload_date: Option<String>,
 }
 
-pub async fn fetch_info(url: &str) -> Result<VideoInfo, Box<dyn std::error::Error>> {
+pub async fn fetch_info(url: &str) -> Result<VideoInfo, Box<dyn std::error::Error + Send + Sync>> {
     let output = Command::new("yt-dlp")
             .arg("--dump-json")
             .arg(url)
