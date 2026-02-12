@@ -55,8 +55,8 @@ async fn main() -> Result<()> {
                         let url = app.input.clone();
 
                         match yt_dlp::info::fetch_info(&url).await {
-                            Ok(json) => {
-                                println!("{json}");
+                            Ok(info) => {
+                                app.video_info = Some(info);
                                 app.screen = app::Screen::Normal;
                             }
                             Err(e) => {

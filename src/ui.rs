@@ -11,7 +11,7 @@ pub fn render(frame: &mut Frame, app: &App) {
     match app.screen {
         crate::app::Screen::UrlInput => draw_input(frame, app),
         crate::app::Screen::Downloading => draw_downloading(frame),
-        crate::app::Screen::Normal => draw_normal(frame),
+        crate::app::Screen::Normal => draw_normal(frame, app),
     }
 }
 
@@ -67,12 +67,18 @@ fn draw_downloading(frame: &mut Frame) {
     frame.render_widget(text, size);
 }
 
-fn draw_normal(frame: &mut Frame) {
+fn draw_normal(frame: &mut Frame, app: &App) {
     let size = frame.size();
 
-    let text = Paragraph::new("Download complete! Press q")
-        .alignment(Alignment::Center)
-        .block(Block::default().title("Done").borders(Borders::ALL));
+        let text = if let Some(info) = &app.video_info {
+            format!("Title:\n{}\n\nPress q to quit", info.title)
+        } else {
+            "No info found".to_string()
+        };
 
-    frame.render_widget(text, size);
+        let paragraph = Paragraph::new(text)
+            .alignment(Alignment::Center)
+            .block(Block::default().title("Video Info").borders(Borders::ALL));
+
+        frame.render_widget(paragraph, size);
 }
