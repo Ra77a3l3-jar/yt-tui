@@ -1,5 +1,6 @@
 mod app;
 mod ui;
+mod yt_dlp;
 
 use std::io;
 use anyhow::Result;
@@ -12,7 +13,8 @@ use ratatui::{backend::CrosstermBackend, Terminal};
 
 use app::App;
 
-fn main() -> Result<()> {
+#[tokio::main]
+async fn main() -> Result<()> {
     enable_raw_mode()?;
     let mut stdout = io::stdout();
     execute!(stdout, EnterAlternateScreen)?;
@@ -49,6 +51,19 @@ fn main() -> Result<()> {
                     if matches!(app.screen, app::Screen::UrlInput) {
                         app.input_mode = app::InputMode::Normal;
                         app.screen = app::Screen::Downloading;
+
+                        let url = app.input.clone();
+
+                        match yt_dlp::info::fetch_info(&url).await {
+                            Ok(json) => {
+                                println!("{json}");
+                                app.screen = app::Screen::Normal;
+                            }
+                            Err(e) => {
+                                println!("ERROR {e}");
+                                app.screen = app::Screen::Normal;
+                            }
+                        }
                     }
                 }
                 _=> {}
