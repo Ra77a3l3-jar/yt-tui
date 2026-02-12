@@ -34,7 +34,7 @@ async fn main() -> Result<()> {
             match msg {
                 message::Message::VideoInfoLoader(info) => {
                     app.video_info = Some(info);
-                    app.screen = app::Screen::Normal;
+                    app.screen = app::Screen::FormatSelect;
                 }
                 message::Message::Error(e) => {
                     app.screen = app::Screen::Normal;
@@ -71,10 +71,32 @@ async fn main() -> Result<()> {
                         }
                     }
 
+                    KeyCode::Up => {
+                        if matches!(app.screen, app::Screen::FormatSelect) {
+                            if app.selected_format > 0 {
+                                app.selected_format -= 1;
+                            }
+                        }
+                    }
+
+                    KeyCode::Down => {
+                        if matches!(app.screen, app::Screen::FormatSelect) {
+                            if let Some(info) = &app.video_info {
+                                if app.selected_format + 1 < info.formats.len() {
+                                    app.selected_format += 1;
+                                }
+                            }
+                        }
+                    }
+
                     KeyCode::Enter => {
+                        if matches!(app.screen, app::Screen::FormatSelect) {
+                            app.screen = app::Screen::Loading;
+                        }
+
                         if matches!(app.screen, app::Screen::UrlInput) {
                             app.input_mode = app::InputMode::Normal;
-                            app.screen = app::Screen::Downloading;
+                            app.screen = app::Screen::Loading;
 
                             let url = app.input.clone();
                             let sender = app.sender.clone();

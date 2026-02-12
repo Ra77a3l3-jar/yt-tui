@@ -2,11 +2,18 @@ use std::process::Stdio;
 use tokio::process::Command;
 use serde::Deserialize;
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, Clone)]
+pub struct Format {
+    pub format_id: String,
+    pub ext: Option<String>,
+    pub format_note: Option<String>,
+}
+
+#[derive(Debug, Deserialize, Clone)]
 pub struct VideoInfo {
     pub title: String,
     pub duration: Option<u64>,
-    pub upload_date: Option<String>,
+    pub formats: Vec<Format>,
 }
 
 pub async fn fetch_info(url: &str) -> Result<VideoInfo, Box<dyn std::error::Error + Send + Sync>> {

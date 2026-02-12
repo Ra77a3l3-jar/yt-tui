@@ -11,6 +11,7 @@ pub struct App {
     pub sender: mpsc::Sender<Message>,
     pub reciver: mpsc::Receiver<Message>,
     pub spinner_index: usize,
+    pub selected_format: usize,
 }
 
 pub enum InputMode {
@@ -20,8 +21,9 @@ pub enum InputMode {
 
 pub enum Screen {
     UrlInput,
-    Downloading,
     Normal,
+    Loading,
+    FormatSelect,
 }
 
 impl App {
@@ -37,6 +39,7 @@ impl App {
             sender: tx,
             reciver: rx,
             spinner_index: 0,
+            selected_format: 0,
         }
     }
 

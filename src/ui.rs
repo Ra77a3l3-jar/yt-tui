@@ -1,5 +1,3 @@
-use std::fmt::format;
-
 use ratatui::{
     Frame,
     widgets::{Block, Borders, Paragraph},
@@ -12,8 +10,9 @@ use crate::app::{App, InputMode};
 pub fn render(frame: &mut Frame, app: &App) {
     match app.screen {
         crate::app::Screen::UrlInput => draw_input(frame, app),
-        crate::app::Screen::Downloading => draw_downloading(frame, app),
         crate::app::Screen::Normal => draw_normal(frame, app),
+        crate::app::Screen::Loading => draw_loading(frame, app),
+        crate::app::Screen::FormatSelect => draw_formats(frame, app),
     }
 }
 
@@ -59,7 +58,7 @@ fn draw_input(frame: &mut Frame, app: &App) {
     }
 }
 
-fn draw_downloading(frame: &mut Frame, app: &App) {
+fn draw_loading(frame: &mut Frame, app: &App) {
     let size = frame.size();
 
     let text = format!("{} Downloading...", app.spinner_frame());
@@ -85,4 +84,37 @@ fn draw_normal(frame: &mut Frame, app: &App) {
             .block(Block::default().title("Video Info").borders(Borders::ALL));
 
         frame.render_widget(paragraph, size);
+}
+
+fn draw_formats(frame: &mut Frame, app: &App) {
+    let size = frame.size();
+
+    let info = match &app.video_info {
+        Some(i) => i,
+        None => return,
+    };
+
+    let items: Vec<String> = info
+        .formats
+        .iter()
+        .enumerate()
+        .map(|(i, f)| {
+            let marker = if i == app.selected_format { ">>" } else { "  " };
+
+            format!(
+                "{} {} | {} | {}",
+                marker,
+                f.format_id,
+                f.ext.as_deref().unwrap_or("?"),
+                f.format_note.as_deref().unwrap_or("")
+            )
+        })
+        .collect();
+
+    let text = items.join("\n");
+
+    let paragraph = Paragraph::new(text)
+        .block(Block::default().title("Select Format").borders(Borders::ALL));
+
+    frame.render_widget(paragraph, size);
 }
