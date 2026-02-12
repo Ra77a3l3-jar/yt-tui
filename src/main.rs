@@ -31,8 +31,25 @@ fn main() -> Result<()> {
 
         // Check for q char to change state
         if let Event::Key(key) = event::read()? {
-            if key.code == KeyCode::Char('q') {
-                app.should_quit = true;
+            match key.code {
+                KeyCode::Char('q') => {
+                    app.should_quit = true;
+                }
+                KeyCode::Char(c) => {
+                    if matches!(app.input_mode, app::InputMode::Editing) {
+                        app.input.push(c);
+                    }
+                }
+                KeyCode::Backspace => {
+                    if matches!(app.input_mode, app::InputMode::Editing) {
+                        app.input.pop();
+                    }
+                }
+                KeyCode::Enter => {
+                    // Will run the actions after the use sends the url
+                    app.input_mode = app::InputMode::Normal;
+                }
+                _=> {}
             }
         }
     }
