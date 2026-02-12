@@ -8,17 +8,26 @@ use ratatui::{
 use crate::app::{App, InputMode};
 
 pub fn render(frame: &mut Frame, app: &App) {
+    match app.screen {
+        crate::app::Screen::UrlInput => draw_input(frame, app),
+        crate::app::Screen::Downloading => draw_downloading(frame),
+        crate::app::Screen::Normal => draw_normal(frame),
+    }
+}
+
+fn draw_input(frame: &mut Frame, app: &App) {
     let size = frame.size();
 
     let chunks = Layout::default()
         .direction(Direction::Vertical)
+        .margin(5)
         .constraints([
-            Constraint::Length(3),
-            Constraint::Min(1),
-        ])
+                Constraint::Length(3),
+                Constraint::Min(1),
+            ])
         .split(size);
 
-    let title = Paragraph::new("yt-tui")
+    let title = Paragraph::new("YT-TUI")
         .alignment(Alignment::Center)
         .block(Block::default().borders(Borders::ALL));
 
@@ -33,8 +42,37 @@ pub fn render(frame: &mut Frame, app: &App) {
         .style(input_style)
         .block(
             Block::default()
-                .title("Enter the youtube link (Press Enter)")
+                .title("Enter the link (Press Enter)")
                 .borders(Borders::ALL),
         );
+
     frame.render_widget(input, chunks[1]);
+
+    if let InputMode::Editing = app.input_mode {
+        frame.set_cursor(
+            // Put cursor past the end of the input text
+            chunks[1].x + app.input.len() as u16 + 1,
+            chunks[1].y + 1,
+        );
+    }
+}
+
+fn draw_downloading(frame: &mut Frame) {
+    let size = frame.size();
+
+    let text = Paragraph::new("Downloading...")
+        .alignment(Alignment::Center)
+        .block(Block::default().borders(Borders::ALL));
+
+    frame.render_widget(text, size);
+}
+
+fn draw_normal(frame: &mut Frame) {
+    let size = frame.size();
+
+    let text = Paragraph::new("Download complete! Press q")
+        .alignment(Alignment::Center)
+        .block(Block::default().title("Done").borders(Borders::ALL));
+
+    frame.render_widget(text, size);
 }

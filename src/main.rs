@@ -46,8 +46,10 @@ fn main() -> Result<()> {
                     }
                 }
                 KeyCode::Enter => {
-                    // Will run the actions after the use sends the url
-                    app.input_mode = app::InputMode::Normal;
+                    if matches!(app.screen, app::Screen::UrlInput) {
+                        app.input_mode = app::InputMode::Normal;
+                        app.screen = app::Screen::Downloading;
+                    }
                 }
                 _=> {}
             }
