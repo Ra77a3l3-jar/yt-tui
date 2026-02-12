@@ -12,6 +12,8 @@ pub struct App {
     pub reciver: mpsc::Receiver<Message>,
     pub spinner_index: usize,
     pub selected_format: usize,
+    pub dowloading: bool,
+    pub progress: f64
 }
 
 pub enum InputMode {
@@ -40,6 +42,8 @@ impl App {
             reciver: rx,
             spinner_index: 0,
             selected_format: 0,
+            dowloading: false,
+            progress: 0.0,
         }
     }
 

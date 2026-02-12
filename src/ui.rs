@@ -61,7 +61,13 @@ fn draw_input(frame: &mut Frame, app: &App) {
 fn draw_loading(frame: &mut Frame, app: &App) {
     let size = frame.size();
 
-    let text = format!("{} Downloading...", app.spinner_frame());
+    let text = if app.dowloading {
+        format!("Downloading... {:.1}%", app.progress)
+    } else if let Some(info) = &app.video_info {
+        format!("Title:\n{}\n\nPress q to quit", info.title)
+    } else {
+        "No info found".to_string()
+    };
 
     let paragraph = Paragraph::new(text)
         .alignment(Alignment::Center)

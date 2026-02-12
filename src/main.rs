@@ -11,7 +11,9 @@ use crossterm::{
     terminal::{disable_raw_mode, enable_raw_mode, EnterAlternateScreen, LeaveAlternateScreen},
 };
 use ratatui::{backend::CrosstermBackend, Terminal};
+use tokio::io::Stdout;
 use std::time::{Duration, Instant};
+use crate::message::Message;
 
 use app::App;
 
@@ -39,6 +41,13 @@ async fn main() -> Result<()> {
                 message::Message::Error(e) => {
                     app.screen = app::Screen::Normal;
                     eprintln!("Error {e}");
+                }
+                message::Message::Progress(p) => {
+                    app.progress = p;
+                }
+                message::Message::DownloadFinished => {
+                    app.dowloading = false;
+                    app.screen = app::Screen::Normal;
                 }
             }
         }
@@ -92,6 +101,40 @@ async fn main() -> Result<()> {
                     KeyCode::Enter => {
                         if matches!(app.screen, app::Screen::FormatSelect) {
                             app.screen = app::Screen::Loading;
+                            app.dowloading = true;
+
+                            let sender = app.sender.clone();
+                            let video_info = app.video_info.clone().unwrap();
+                            let selected = app.selected_format;
+
+                            tokio::spawn(async move {
+                                let format_id = &video_info.formats[selected].format_id;
+                                let url = video_info.title.clone();
+
+                                // Create yt-dlp sub process
+                                let mut cmd = tokio::process::Command::new("yt-dlp");
+                                cmd.arg("-f").arg(format_id);
+                                cmd.arg(&url);
+                                cmd.stdout(std::process::Stdio::piped());
+                                cmd.stderr(std::process::Stdio::piped());
+
+                                let mut child = cmd.spawn().expect("Failed to spawn yt-dlp");
+
+                                if let Some(stdout) = child.stdout.take() {
+                                    use tokio::io::{BufReader, AsyncBufReadExt};
+                                    let reader = BufReader::new(stdout);
+                                    let mut lines = reader.lines();
+
+                                    while let Ok(Some(line)) = lines.next_line().await {
+                                        // Get progress from line
+                                        if let Some(percent) = parse_progress(&line) {
+                                            let _ = sender.send(message::Message::Progress(percent)).await;
+                                        }
+                                    }
+                                }
+                                let _ = child.wait().await;
+                                let _ = sender.send(Message::DownloadFinished).await;
+                            });
                         }
 
                         if matches!(app.screen, app::Screen::UrlInput) {
@@ -131,4 +174,17 @@ async fn main() -> Result<()> {
     terminal.show_cursor()?;
 
     Ok(())
+}
+
+fn parse_progress(line: &str) -> Option<f64> {
+    // It will return the value from lines like "download" 50.0%
+    if line.contains("%") {
+        let parts: Vec<_> = line.split_whitespace().collect();
+        for p in parts {
+            if let Ok(val) = p.trim_end_matches('%').parse::<f64>() {
+                return Some(val);
+            }
+        }
+    }
+    None
 }
